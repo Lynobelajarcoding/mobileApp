@@ -1,0 +1,185 @@
+import React, { useState, useEffect } from 'react';
+import { ScrollView, View, Text, TextInput, Button, Alert, StyleSheet } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Picker } from '@react-native-picker/picker';
+import Slider from '@react-native-community/slider';
+import DateTimePicker from '@react-native-community/datetimepicker';
+import { Platform } from 'react-native';
+import { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
+
+
+export default function App() {
+  const [idBarang, setIdBarang] = useState('');
+  const [namaBarang, setNamaBarang] = useState('');
+  const [alamatTujuan, setAlamatTujuan] = useState('');
+  const [pengirim, setPengirim] = useState('');
+  const [jumlahBarang, setJumlahBarang] = useState(1);
+  const [tanggalKirim, setTanggalKirim] = useState(new Date());
+  const [showTanggal, setShowTanggal] = useState(false);
+  const [penerima, setPenerima] = useState('');
+  const [dataTerkirim, setDataTerkirim] = useState([]);
+
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const data = await AsyncStorage.getItem('dataTerkirim');
+        if (data !== null) {
+          setDataTerkirim(JSON.parse(data));
+        }
+      } catch (e) {
+        console.log('Gagal memuat data', e);
+      }
+    };
+    loadData();
+  }, []);
+
+  const simpanData = async () => {
+    const newData = {
+      idBarang,
+      namaBarang,
+      alamatTujuan,
+      pengirim,
+      jumlahBarang,
+      tanggalKirim: tanggalKirim.toLocaleDateString(),
+      penerima,
+    };
+
+    try {
+      const updatedData = [...dataTerkirim, newData];
+      await AsyncStorage.setItem('dataTerkirim', JSON.stringify(updatedData));
+      setDataTerkirim(updatedData);
+
+      Alert.alert('Data Terkirim', `Barang ${namaBarang} berhasil disimpan.`);
+      setIdBarang('');
+      setNamaBarang('');
+      setAlamatTujuan('');
+      setPengirim('');
+      setJumlahBarang(1);
+      setTanggalKirim(new Date());
+      setPenerima('');
+    } catch (e) {
+      Alert.alert('Gagal menyimpan data!');
+    }
+  };
+
+  return (
+    <ScrollView contentContainerStyle={styles.scrollContainer}>
+      <View style={styles.container}>
+        <Text style={styles.title}>Form Pengiriman Barang</Text>
+
+        <Text style={styles.label}>ID Barang:</Text>
+        <TextInput style={styles.input} value={idBarang} onChangeText={setIdBarang} placeholder="Masukkan ID Barang" />
+
+        <Text style={styles.label}>Nama Barang:</Text>
+        <TextInput style={styles.input} value={namaBarang} onChangeText={setNamaBarang} placeholder="Masukkan Nama Barang" />
+
+        <Text style={styles.label}>Alamat Tujuan:</Text>
+        <TextInput
+          style={[styles.input, { height: 80 }]}
+          value={alamatTujuan}
+          onChangeText={setAlamatTujuan}
+          placeholder="Masukkan Alamat Tujuan"
+          multiline
+        />
+
+        <Text style={styles.label}>Pengirim:</Text>
+        <View style={styles.pickerContainer}>
+          <Picker selectedValue={pengirim} onValueChange={(val) => setPengirim(val)}>
+            <Picker.Item label="Pilih Pengirim" value="" />
+            <Picker.Item label="Andi" value="Andi" />
+            <Picker.Item label="Budi" value="Budi" />
+            <Picker.Item label="Citra" value="Citra" />
+          </Picker>
+        </View>
+
+        <Text style={styles.label}>Jumlah Barang: {jumlahBarang}</Text>
+        <Slider
+          style={{ width: '100%' }}
+          minimumValue={1}
+          maximumValue={100}
+          step={1}
+          value={jumlahBarang}
+          onValueChange={setJumlahBarang}
+          minimumTrackTintColor="#3399ff"
+          maximumTrackTintColor="#ddd"
+          thumbTintColor="#3399ff"
+        />
+
+        <Text style={styles.label}>Tanggal Kirim:</Text>
+        <Button title={tanggalKirim.toLocaleDateString()} onPress={() => setShowTanggal(true)} />
+        {showTanggal && (
+          <DateTimePicker
+            value={tanggalKirim}
+            mode="date"
+            display="default"
+            onChange={(event, selectedDate) => {
+              setShowTanggal(false);
+              if (selectedDate) setTanggalKirim(selectedDate);
+            }}
+          />
+        )}
+
+        <Text style={styles.label}>Penerima:</Text>
+        <TextInput style={styles.input} value={penerima} onChangeText={setPenerima} placeholder="Masukkan Nama Penerima" />
+
+        <View style={{ marginTop: 20 }}>
+          <Button title="Simpan" onPress={simpanData} />
+        </View>
+
+        <Text style={[styles.label, { marginTop: 30 }]}>Daftar Barang Terkirim:</Text>
+        {dataTerkirim.map((item, index) => (
+          <View key={index} style={styles.savedItem}>
+            <Text>ID: {item.idBarang}</Text>
+            <Text>Nama: {item.namaBarang}</Text>
+            <Text>Alamat: {item.alamatTujuan}</Text>
+            <Text>Pengirim: {item.pengirim}</Text>
+            <Text>Jumlah: {item.jumlahBarang}</Text>
+            <Text>Tanggal: {item.tanggalKirim}</Text>
+            <Text>Penerima: {item.penerima}</Text>
+          </View>
+        ))}
+      </View>
+    </ScrollView>
+  );
+}
+
+const styles = StyleSheet.create({
+  scrollContainer: {
+    flexGrow: 1,
+  },
+  container: {
+    padding: 20,
+    paddingTop: 50,
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  label: {
+    marginTop: 15,
+    marginBottom: 5,
+    fontWeight: 'bold',
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: '#999',
+    padding: 10,
+    borderRadius: 5,
+  },
+  pickerContainer: {
+    borderWidth: 1,
+    borderColor: '#999',
+    borderRadius: 5,
+    marginBottom: 10,
+  },
+  savedItem: {
+    padding: 10,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 5,
+    marginVertical: 5,
+    backgroundColor: '#f9f9f9',
+  },
+});
